@@ -130,5 +130,29 @@ contract('StakingPool', async accounts => {
       amountWithdrawn = balanceBefore.sub(balanceAfter);
       amountWithdrawn.should.be.bignumber.equal(new BN(254));
     });
+
+    it('transfers correct values to all participants after multiple reward, deposit from fourth participant, and reward again', async () => {
+      // reward is accrued several times
+      for (let i = 0; i < 10; i++) {
+        await stakingPool.send(1000, {from: accounts[0]}).should.be.fulfilled;
+      }
+      (await web3.eth.getBalance(stakingPool.address)).should.be.equal('11170');
+
+      // fourth participant deposits to the contract after pool rewarding
+      (await stakingPool.totalShares.call()).toNumber().should.be.equal(170);
+      await stakingPool.deposit({from: accounts[4], value: 400}).should.be.fulfilled;
+      (await stakingPool.totalShares.call()).toNumber().should.be.equal(176);
+
+      // reward is accrued
+      await stakingPool.send(1000, {from: accounts[0]}).should.be.fulfilled;
+      (await web3.eth.getBalance(stakingPool.address)).should.be.equal('12570');
+
+      // fourth participant withdraws their share
+      balanceBefore = new BN(await web3.eth.getBalance(stakingPool.address));
+      await stakingPool.withdrawal(6, {from: accounts[4]}).should.be.fulfilled;
+      balanceAfter = new BN(await web3.eth.getBalance(stakingPool.address));
+      amountWithdrawn = balanceBefore.sub(balanceAfter);
+      amountWithdrawn.should.be.bignumber.equal(new BN(428));
+    });
   });
 });
